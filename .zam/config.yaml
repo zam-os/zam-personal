@@ -1,13 +1,17 @@
-# ZAM Instance Configuration
+# ZAM Personal Instance Configuration
 # Non-secret values only — secrets are obtained via auth flows during setup.
 # This file is git-tracked. Never put tokens, passwords, or PATs here.
 
 identity:
   user_id: ""                # your ZAM identity, e.g. "thomas"
 
+communities:                 # communities this person belongs to
+  []                         # - url: github:zam-os/zam-dev
+                             #   role: developer   # member | contributor | maintainer | developer
+
 turso:
-  url: ""                    # Turso DB URL, e.g. "libsql://zam-yourname.aws-eu-west-1.turso.io"
-  db: ""                     # Turso DB name, e.g. "zam" — used by turso CLI for token creation
+  url: ""                    # Turso DB URL, e.g. "libsql://zam-yourname.region.turso.io"
+  db: ""                     # Turso DB name — used by turso CLI for token creation
 
 connectors:
   ado:
