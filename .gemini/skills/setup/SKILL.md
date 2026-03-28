@@ -1,6 +1,6 @@
 ---
 name: setup
-description: First-time setup for a ZAM personal instance. Guides through dependency installation, skill distribution, identity configuration, and optional connector setup. Handles both new accounts and existing accounts with a local or cloud database. Run this once after creating your personal repo from the template.
+description: First-time setup for a ZAM personal instance. Reads .zam/config.yaml for non-secret config, detects the OS (macOS or Windows), installs tools, handles auth flows, and wires everything up. Run this once after cloning your personal repo.
 user-invocable: true
 ---
 
@@ -18,15 +18,43 @@ You are guiding the user through first-time setup of their ZAM personal instance
 
 ---
 
-## Step 1 — Check Node.js
+## Step 0 — Read instance config
+
+Read `.zam/config.yaml` in the repo root. This file contains non-secret instance configuration. Extract:
+- `identity.user_id` — the ZAM username
+- `turso.url` — Turso database URL (empty if no cloud sync)
+- `turso.db` — Turso database name (for CLI token creation)
+- `connectors.ado.org_url` — Azure DevOps org (empty if not used)
+- `connectors.ado.project` — ADO project name
+
+If any required value is empty, you will prompt the user for it at the relevant step.
+
+## Step 1 — Detect platform
+
+```bash
+uname -s
+```
+
+Determine the platform:
+- **Darwin** → macOS (Apple Silicon). Package manager: `brew`.
+- **MINGW***, **MSYS***, **CYGWIN***, or if `uname` fails → Windows. Package manager: `winget`.
+
+Remember the platform for all subsequent install commands.
+
+## Step 2 — Check Node.js
 
 ```bash
 node --version
 ```
 
-Must be v18 or later. If missing, direct the user to nodejs.org.
+Must be v18 or later. If missing or too old, install it:
 
-## Step 2 — Install dependencies
+| Platform | Command |
+|----------|---------|
+| macOS | `brew install node` |
+| Windows | `winget install OpenJS.NodeJS` |
+
+## Step 3 — Install dependencies
 
 ```bash
 npm install
@@ -38,133 +66,138 @@ This installs the `zam` CLI into `node_modules/`. Confirm with:
 npx zam --version
 ```
 
-## Step 3 — Distribute skills
+## Step 4 — Distribute skills and initialize DB
 
 ```bash
-npx zam setup --skip-init --skip-claude-md
+npx zam setup
 ```
 
-This copies `.claude/skills/zam/SKILL.md` and `.gemini/skills/zam/SKILL.md` from `node_modules/zam/` into this repo.
+This copies skill files into `.claude/skills/zam/` and `.gemini/skills/zam/`, initializes `~/.zam/zam.db`, and generates `CLAUDE.md`.
 
-If you see `skip` instead of `copy`, run with `--force`:
+If skill files already exist and need updating, run with `--force`:
 ```bash
-npx zam setup --skip-init --skip-claude-md --force
+npx zam setup --force
 ```
 
-## Step 4 — New account or existing?
+## Step 5 — Set identity
 
-Ask the user:
+Use `identity.user_id` from config. If empty, ask the user:
+> "What username would you like to use? (lowercase, no spaces — e.g. your first name)"
 
-> "Do you have an existing ZAM account with learning history you want to connect to, or is this a fresh start?"
-
-Branch here:
-
----
-
-### Branch A — Fresh start (new account)
-
-**4A-1. Initialize the database:**
 ```bash
-npx zam init
+npx zam whoami --set <user_id>
 ```
 
-**4A-2. Set identity:**
+## Step 6 — Turso cloud sync
 
-Ask: "What username would you like to use? (lowercase, no spaces — e.g. your first name)"
+**Skip this step if `turso.url` in config is empty and the user doesn't want cloud sync.**
+
+If `turso.url` is configured, this machine needs to connect to the existing cloud database.
+
+**6a. Check if Turso CLI is installed:**
 
 ```bash
-npx zam whoami --set <chosen-id>
+turso --version
 ```
 
-**4A-3. Optional — Azure DevOps connector:**
+If missing, install it:
 
-Ask: "Do you use Azure DevOps for work items?"
+| Platform | Command |
+|----------|---------|
+| macOS | `brew install tursodatabase/tap/turso` |
+| Windows | `winget install ChiselStrike.Turso` |
 
-If yes:
+**6b. Authenticate with Turso:**
+
 ```bash
-npx zam connector setup ado
+turso auth login
 ```
 
-**4A-4. Optional — Cloud sync:**
+This opens a browser. Tell the user:
+> "Please complete the Turso login in your browser. Let me know when it's done."
 
-Ask: "Do you want to sync your learning history across machines via Turso?"
+**Wait for the user to confirm before continuing.** Do not proceed until auth is complete.
 
-If yes:
+Verify auth worked:
 ```bash
-npx zam connector setup turso
+turso auth status
 ```
 
----
+**6c. Create a database token:**
 
-### Branch B — Existing account (migrating or connecting)
-
-The user already has ZAM data — either in a local SQLite file on another machine, or already in Turso.
-
-Ask: "Where does your existing data live — in a local database file on another machine, or already in Turso cloud?"
-
-**If local database (migrating to cloud):**
-
-The user needs to export from their old machine first, then connect here.
-
-Tell the user:
-> "On your old machine, run: `zam connector setup turso` — this migrates your local `~/.zam/zam.db` to Turso and gives you connection credentials. Then come back here and we will connect this machine to the same Turso database."
-
-Once they have the Turso credentials:
+Use `turso.db` from config:
 
 ```bash
-npx zam connector setup turso
+turso db tokens create <db>
 ```
 
-Follow the prompts with the existing Turso database URL and auth token.
+Capture the token output — this is the secret auth token.
 
-**If already in Turso:**
+**6d. Store Turso credentials in ZAM:**
 
 ```bash
-npx zam connector setup turso
+npx zam settings set --key turso.url --value "<url from config>"
+npx zam settings set --key turso.token --value "<token from 6c>"
 ```
 
-Use the existing database URL and auth token.
-
-**4B-2. Set identity to match existing account:**
-
-Ask: "What is your ZAM username on the existing account?"
+**6e. Sync and verify:**
 
 ```bash
-npx zam whoami --set <existing-id>
+npx zam connector sync
+npx zam stats --user <user_id>
 ```
 
-**4B-3. Verify data is accessible:**
+You should see existing card counts and review history. If it shows zeros, the Turso connection may be pointing to a different database — double-check the URL.
+
+## Step 7 — Azure DevOps connector
+
+**Skip this step if `connectors.ado.org_url` in config is empty and the user doesn't use ADO.**
+
+If ADO config values are present, store the non-secret parts and prompt for the PAT:
 
 ```bash
-npx zam stats --user <existing-id>
+npx zam settings set --key ado.org_url --value "<org_url from config>"
+npx zam settings set --key ado.project --value "<project from config>"
 ```
 
-You should see the existing card counts and review history. If it shows zeros, the Turso connection may be pointing to a different database — double-check the URL.
-
----
-
-## Step 5 — Commit the distributed skill files
+Then prompt the user for their PAT:
+> "Please provide your Azure DevOps Personal Access Token. It needs Work Items (Read) scope. You can create one at {org_url}/_usersSettings/tokens"
 
 ```bash
-git add .claude/skills/zam/ .gemini/skills/zam/
+npx zam settings set --key ado.pat --value "<user-provided PAT>"
+```
+
+Verify:
+```bash
+npx zam connector tasks
+```
+
+## Step 8 — Set goals directory
+
+```bash
+npx zam settings set --key personal.goals_dir --value "$(pwd)/goals"
+```
+
+## Step 9 — Commit setup artifacts
+
+```bash
+git add .claude/skills/zam/ .gemini/skills/zam/ CLAUDE.md
 git commit -m "chore: distribute zam skill files"
 ```
 
-## Step 6 — Done
+## Step 10 — Done
 
 Tell the user:
 
-> "Setup is complete. Run `/zam` in Gemini CLI to start a learning session on whatever you are working on."
+> "Setup is complete. Run `/zam` in Gemini CLI to start a learning session."
 
 ---
 
-## Updating skill files after a zam upgrade
-
-When a new version of `zam` is published:
+## Updating after a zam upgrade
 
 ```bash
 npm install
-npx zam setup --skip-init --skip-claude-md --force
+npx zam setup --force
 git add .claude/skills/zam/ .gemini/skills/zam/
-git commit -m "chore: update zam skill files to vX.Y.Z"
+git commit -m "chore: update zam skill files"
 ```
