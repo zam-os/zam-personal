@@ -193,17 +193,10 @@ Capture the output — this is the token.
 
 **If WSL is not installed:**
 
-Offer two options:
+WSL is required to run the Turso CLI on Windows. Install it:
 
-> **Option A — Install WSL** (requires admin + reboot):
-> In an admin PowerShell: `wsl --install`
-> After reboot and WSL setup, re-open this repo and run `/setup` again.
-
-> **Option B — Get the token another way:**
-> - From the Turso web dashboard: Databases → `<db>` → Generate Token
-> - Or from another machine: `turso db tokens create <db>`
->
-> Paste the token when ready and I'll continue.
+> Open an admin PowerShell and run: `wsl --install`
+> After the reboot and WSL first-run setup, re-open this repo and run `/setup` again.
 
 ### Connect ZAM to Turso
 
