@@ -92,58 +92,110 @@ npx zam whoami --set <user_id>
 
 **Skip this step if `turso.url` in config is empty and the user doesn't want cloud sync.**
 
-If `turso.url` is configured, this machine needs to connect to the existing cloud database.
+The goal of this step is to obtain a Turso auth token, then hand off to `zam connector setup turso` which stores the credentials and verifies the connection interactively.
 
-**6a. Check if Turso CLI is installed:**
+Have the Turso database URL from config ready: `<turso.url>`
 
+### 6a — Get a Turso auth token
+
+The method depends on the platform and what's available.
+
+---
+
+**macOS:**
+
+Check if Turso CLI is installed:
 ```bash
 turso --version
 ```
 
-If missing, install it:
+If missing:
+```bash
+brew install tursodatabase/tap/turso
+```
 
-| Platform | Command |
-|----------|---------|
-| macOS | `brew install tursodatabase/tap/turso` |
-| Windows | `winget install ChiselStrike.Turso` |
-
-**6b. Authenticate with Turso:**
-
+Authenticate:
 ```bash
 turso auth login
 ```
 
 This opens a browser. Tell the user:
-> "Please complete the Turso login in your browser. Let me know when it's done."
+> "Please complete the Turso login in your browser — let me know when it's done."
 
-**Wait for the user to confirm before continuing.** Do not proceed until auth is complete.
+**Wait for the user to confirm before continuing.**
 
-Verify auth worked:
-```bash
-turso auth status
-```
-
-**6c. Create a database token:**
-
-Use `turso.db` from config:
-
+Create a token using `turso.db` from config:
 ```bash
 turso db tokens create <db>
 ```
 
-Capture the token output — this is the secret auth token.
+Capture the output — this is the token.
 
-**6d. Store Turso credentials in ZAM:**
+---
+
+**Windows — check for WSL first:**
 
 ```bash
-npx zam settings set --key turso.url --value "<url from config>"
-npx zam settings set --key turso.token --value "<token from 6c>"
+wsl --version
 ```
 
-**6e. Sync and verify:**
+**If WSL is available** (command succeeds):
+
+Install Turso CLI inside WSL:
+```bash
+wsl -- curl -sSfL https://get.tur.so/install.sh | bash
+```
+
+Authenticate inside WSL:
+```bash
+wsl -- turso auth login
+```
+
+This opens a browser. Tell the user:
+> "Please complete the Turso login in your browser — let me know when it's done."
+
+**Wait for the user to confirm before continuing.**
+
+Create a token inside WSL using `turso.db` from config:
+```bash
+wsl -- /root/.turso/bin/turso db tokens create <db>
+```
+
+Capture the output — this is the token.
+
+**If WSL is not installed** (command fails):
+
+Offer two options:
+
+> **Option A — Install WSL** (requires admin rights and a reboot):
+> Run in an admin PowerShell: `wsl --install`
+> After reboot and WSL first-run setup, re-open this repo and run `/setup` again.
+
+> **Option B — Get the token another way** (no WSL needed):
+> - From the **Turso web dashboard**: go to app.turso.tech → Databases → `<db>` → "Generate Token"
+> - **Or from another machine** where the Turso CLI is already installed: `turso db tokens create <db>`
+>
+> Once you have the token, let me know and I'll continue.
+
+Ask the user which they prefer and wait for them to either reboot (Option A) or provide the token (Option B).
+
+---
+
+### 6b — Connect ZAM to Turso
+
+Once you have the token, run the interactive connector setup:
 
 ```bash
-npx zam connector sync
+npx zam connector setup turso
+```
+
+When prompted:
+- **URL**: paste `turso.url` from config
+- **Token**: paste the token from Step 6a
+
+### 6c — Verify
+
+```bash
 npx zam stats --user <user_id>
 ```
 

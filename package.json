@@ -4,6 +4,6 @@
   "private": true,
   "description": "Your personal ZAM kernel — beliefs, goals, and identity.",
   "dependencies": {
-    "zam": "^0.1.0"
+    "zam": "github:zam-os/zam"
   }
 }
