@@ -2,3 +2,4 @@ node_modules/
 .zam/*.db
 .zam/*.db-wal
 .zam/*.db-shm
+.zam/credentials.json

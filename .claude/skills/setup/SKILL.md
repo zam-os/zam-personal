@@ -200,12 +200,10 @@ WSL is required to run the Turso CLI on Windows. Install it:
 
 ### Connect ZAM to Turso
 
-Once you have the token:
+Once you have the token, pass it directly (no interactive prompts):
 ```bash
-npx zam connector setup turso
+npx zam connector setup turso --url "<turso.url from config>" --token "<captured token>"
 ```
-
-When prompted: paste the `turso.url` from config and the token.
 
 Verify:
 ```bash
@@ -219,15 +217,13 @@ You should see existing card counts and review history.
 **Skip if `connectors.ado.org_url` is empty.**
 
 ```bash
-npx zam settings set --key ado.org_url --value "<org_url>"
-npx zam settings set --key ado.project --value "<project>"
+npx zam connector setup ado
 ```
 
-Prompt for the PAT:
-> "Please provide your Azure DevOps Personal Access Token (Work Items: Read scope)."
+When prompted, enter the org URL, project name, and PAT from config / user input.
 
+Verify:
 ```bash
-npx zam settings set --key ado.pat --value "<PAT>"
 npx zam connector tasks
 ```
 
