@@ -1,6 +1,6 @@
 ---
 name: setup
-description: First-time setup for a ZAM personal instance. Reads .zam/config.yaml for non-secret config, detects the OS (macOS or Windows), installs tools, handles auth flows, and wires everything up. Run this once after cloning your personal repo.
+description: First-time setup for a ZAM personal instance. Reads .zam/config.yaml for non-secret config, detects the OS (macOS or Windows), installs tools, clones community repos, handles auth flows, and wires everything up. Run this once after creating your personal repo from the template.
 user-invocable: true
 ---
 
@@ -14,20 +14,18 @@ You are guiding the user through first-time setup of their ZAM personal instance
 
 - **This repo** (`beliefs/`, `goals/`) — the slow layer. Tracked in git. Changes require a commit to take effect.
 - **`~/.zam/zam.db`** — the fast layer. Tokens, cards, review history, sessions. Not committed to git.
-- **Skill files** — copied from the `zam` npm package into `.claude/skills/zam/` and `.gemini/skills/zam/`. These unlock the `/zam` learning agent.
+- **Skill files** — copied from `zam-core` into `.claude/skills/zam/` and `.gemini/skills/zam/`. These unlock the `/zam` learning agent.
+- **Community repos** — cloned alongside this repo, linked if they are source packages.
 
 ---
 
 ## Step 0 — Read instance config
 
-Read `.zam/config.yaml` in the repo root. This file contains non-secret instance configuration. Extract:
-- `identity.user_id` — the ZAM username
-- `turso.url` — Turso database URL (empty if no cloud sync)
-- `turso.db` — Turso database name (for CLI token creation)
-- `connectors.ado.org_url` — Azure DevOps org (empty if not used)
-- `connectors.ado.project` — ADO project name
-
-If any required value is empty, you will prompt the user for it at the relevant step.
+Read `.zam/config.yaml`. Extract:
+- `identity.user_id`
+- `communities[]` — list of `{url, role}` entries (may be empty)
+- `turso.url` and `turso.db`
+- `connectors.ado.org_url` and `connectors.ado.project`
 
 ## Step 1 — Detect platform
 
@@ -35,11 +33,8 @@ If any required value is empty, you will prompt the user for it at the relevant 
 uname -s
 ```
 
-Determine the platform:
-- **Darwin** → macOS (Apple Silicon). Package manager: `brew`.
-- **MINGW***, **MSYS***, **CYGWIN***, or if `uname` fails → Windows. Package manager: `winget`.
-
-Remember the platform for all subsequent install commands.
+- **Darwin** → macOS. Package manager: `brew`.
+- **MINGW***, **MSYS***, **CYGWIN***, or failure → Windows. Package manager: `winget`.
 
 ## Step 2 — Check Node.js
 
@@ -47,7 +42,7 @@ Remember the platform for all subsequent install commands.
 node --version
 ```
 
-Must be v18 or later. If missing or too old, install it:
+Must be v18 or later. If missing:
 
 | Platform | Command |
 |----------|---------|
@@ -60,8 +55,7 @@ Must be v18 or later. If missing or too old, install it:
 npm install
 ```
 
-This installs the `zam` CLI into `node_modules/`. Confirm with:
-
+Confirm with:
 ```bash
 npx zam --version
 ```
@@ -72,37 +66,81 @@ npx zam --version
 npx zam setup
 ```
 
-This copies skill files into `.claude/skills/zam/` and `.gemini/skills/zam/`, initializes `~/.zam/zam.db`, and generates `CLAUDE.md`.
+This copies `.claude/skills/zam/` and `.gemini/skills/zam/` from `node_modules/zam-core/`, initializes `~/.zam/zam.db`, and skips CLAUDE.md (already present).
 
-If skill files already exist and need updating, run with `--force`:
-```bash
-npx zam setup --force
-```
+To update existing skill files: `npx zam setup --force`
 
 ## Step 5 — Set identity
 
-Use `identity.user_id` from config. If empty, ask the user:
-> "What username would you like to use? (lowercase, no spaces — e.g. your first name)"
+Use `identity.user_id` from config. If empty, ask:
+> "What username would you like to use? (lowercase, no spaces)"
 
 ```bash
 npx zam whoami --set <user_id>
 ```
 
-## Step 6 — Turso cloud sync
+## Step 6 — Clone community repos
 
-**Skip this step if `turso.url` in config is empty and the user doesn't want cloud sync.**
+**Skip if `communities` in config is empty.**
 
-The goal of this step is to obtain a Turso auth token, then hand off to `zam connector setup turso` which stores the credentials and verifies the connection interactively.
+For each entry in `communities[]`:
 
-Have the Turso database URL from config ready: `<turso.url>`
+**6a. Determine the parent directory** (sibling of this repo):
+```bash
+dirname $(pwd)
+```
 
-### 6a — Get a Turso auth token
+**6b. Clone the community repo** if not already present:
+```bash
+# Convert github:org/repo → https://github.com/org/repo
+git clone https://github.com/<org>/<repo> <parent-dir>/<repo>
+```
 
-The method depends on the platform and what's available.
+Skip with a message if the directory already exists.
 
----
+**6c. Read the community's config:**
 
-**macOS:**
+Read `<community-dir>/.zam/config.yaml`. Extract:
+- `repos[]` — list of `{url, description, link}` entries
+
+**6d. Clone each repo listed by the community:**
+
+For each repo in community `repos[]`:
+```bash
+git clone https://github.com/<org>/<repo> <parent-dir>/<repo>
+```
+
+Skip if already present.
+
+**6e. Link source packages:**
+
+For each repo where `link: true`:
+```bash
+cd <parent-dir>/<repo>
+npm install
+npm link
+```
+
+Then link into this personal instance:
+```bash
+cd <this-repo>
+npm link <package-name>
+```
+
+The package name comes from `<repo>/package.json` → `"name"` field.
+
+Confirm the link worked:
+```bash
+npx zam --version
+```
+
+## Step 7 — Turso cloud sync
+
+**Skip if `turso.url` is empty.**
+
+The goal: obtain a Turso auth token, then run `zam connector setup turso` interactively.
+
+### macOS
 
 Check if Turso CLI is installed:
 ```bash
@@ -119,10 +157,9 @@ Authenticate:
 turso auth login
 ```
 
-This opens a browser. Tell the user:
 > "Please complete the Turso login in your browser — let me know when it's done."
 
-**Wait for the user to confirm before continuing.**
+**Wait for user confirmation before continuing.**
 
 Create a token using `turso.db` from config:
 ```bash
@@ -131,125 +168,100 @@ turso db tokens create <db>
 
 Capture the output — this is the token.
 
----
-
-**Windows — check for WSL first:**
+### Windows — check for WSL first
 
 ```bash
 wsl --version
 ```
 
-**If WSL is available** (command succeeds):
+**If WSL is available:**
 
-Install Turso CLI inside WSL:
 ```bash
 wsl -- curl -sSfL https://get.tur.so/install.sh | bash
-```
-
-Authenticate inside WSL:
-```bash
 wsl -- turso auth login
 ```
 
-This opens a browser. Tell the user:
 > "Please complete the Turso login in your browser — let me know when it's done."
 
-**Wait for the user to confirm before continuing.**
+**Wait for user confirmation before continuing.**
 
-Create a token inside WSL using `turso.db` from config:
 ```bash
 wsl -- /root/.turso/bin/turso db tokens create <db>
 ```
 
 Capture the output — this is the token.
 
-**If WSL is not installed** (command fails):
+**If WSL is not installed:**
 
 Offer two options:
 
-> **Option A — Install WSL** (requires admin rights and a reboot):
-> Run in an admin PowerShell: `wsl --install`
-> After reboot and WSL first-run setup, re-open this repo and run `/setup` again.
+> **Option A — Install WSL** (requires admin + reboot):
+> In an admin PowerShell: `wsl --install`
+> After reboot and WSL setup, re-open this repo and run `/setup` again.
 
-> **Option B — Get the token another way** (no WSL needed):
-> - From the **Turso web dashboard**: go to app.turso.tech → Databases → `<db>` → "Generate Token"
-> - **Or from another machine** where the Turso CLI is already installed: `turso db tokens create <db>`
+> **Option B — Get the token another way:**
+> - From the Turso web dashboard: Databases → `<db>` → Generate Token
+> - Or from another machine: `turso db tokens create <db>`
 >
-> Once you have the token, let me know and I'll continue.
+> Paste the token when ready and I'll continue.
 
-Ask the user which they prefer and wait for them to either reboot (Option A) or provide the token (Option B).
+### Connect ZAM to Turso
 
----
-
-### 6b — Connect ZAM to Turso
-
-Once you have the token, run the interactive connector setup:
-
+Once you have the token:
 ```bash
 npx zam connector setup turso
 ```
 
-When prompted:
-- **URL**: paste `turso.url` from config
-- **Token**: paste the token from Step 6a
+When prompted: paste the `turso.url` from config and the token.
 
-### 6c — Verify
-
+Verify:
 ```bash
 npx zam stats --user <user_id>
 ```
 
-You should see existing card counts and review history. If it shows zeros, the Turso connection may be pointing to a different database — double-check the URL.
+You should see existing card counts and review history.
 
-## Step 7 — Azure DevOps connector
+## Step 8 — Azure DevOps connector
 
-**Skip this step if `connectors.ado.org_url` in config is empty and the user doesn't use ADO.**
-
-If ADO config values are present, store the non-secret parts and prompt for the PAT:
+**Skip if `connectors.ado.org_url` is empty.**
 
 ```bash
-npx zam settings set --key ado.org_url --value "<org_url from config>"
-npx zam settings set --key ado.project --value "<project from config>"
+npx zam settings set --key ado.org_url --value "<org_url>"
+npx zam settings set --key ado.project --value "<project>"
 ```
 
-Then prompt the user for their PAT:
-> "Please provide your Azure DevOps Personal Access Token. It needs Work Items (Read) scope. You can create one at {org_url}/_usersSettings/tokens"
+Prompt for the PAT:
+> "Please provide your Azure DevOps Personal Access Token (Work Items: Read scope)."
 
 ```bash
-npx zam settings set --key ado.pat --value "<user-provided PAT>"
-```
-
-Verify:
-```bash
+npx zam settings set --key ado.pat --value "<PAT>"
 npx zam connector tasks
 ```
 
-## Step 8 — Set goals directory
+## Step 9 — Set goals directory
 
 ```bash
 npx zam settings set --key personal.goals_dir --value "$(pwd)/goals"
 ```
 
-## Step 9 — Commit setup artifacts
+## Step 10 — Commit setup artifacts
 
 ```bash
 git add .claude/skills/zam/ .gemini/skills/zam/ CLAUDE.md
-git commit -m "chore: distribute zam skill files"
+git commit -m "chore: distribute zam-core skill files"
 ```
 
-## Step 10 — Done
-
-Tell the user:
+## Step 11 — Done
 
 > "Setup is complete. Run `/zam` to start a learning session."
 
 ---
 
-## Updating after a zam upgrade
+## Updating after a zam-core upgrade
 
 ```bash
 npm install
 npx zam setup --force
 git add .claude/skills/zam/ .gemini/skills/zam/
-git commit -m "chore: update zam skill files"
+git commit -m "chore: update zam-core skill files"
 ```
