@@ -168,35 +168,70 @@ turso db tokens create <db>
 
 Capture the output — this is the token.
 
-### Windows — check for WSL first
+### Windows — WSL with a full Linux distro
+
+The Turso CLI requires a real Linux distro in WSL (Docker Desktop does not count).
+
+> **IMPORTANT — Git Bash path mangling:** Every `wsl` command must be prefixed
+> with `MSYS_NO_PATHCONV=1` to prevent Git Bash from rewriting Unix paths.
+
+**7w-1. Check for a usable WSL distro:**
 
 ```bash
-wsl --version
+MSYS_NO_PATHCONV=1 wsl -l -v
 ```
 
-**If WSL is available:**
+Look for a distro like **Ubuntu** (not `docker-desktop`). If none exists:
+
+> Open an admin PowerShell and run: `wsl --install -d Ubuntu`
+> Complete the Ubuntu first-run setup (username/password), then re-run `/setup`.
+
+**Stop here if no usable distro is available.**
+
+For the remaining commands, use `-d <distro>` (e.g. `-d Ubuntu`) to target the
+correct distro.
+
+**7w-2. Install the Turso CLI:**
 
 ```bash
-wsl -- curl -sSfL https://get.tur.so/install.sh | bash
-wsl -- turso auth login
+MSYS_NO_PATHCONV=1 wsl -d Ubuntu -- sh -c 'curl -sSfL https://get.tur.so/install.sh | sh'
 ```
 
-> "Please complete the Turso login in your browser — let me know when it's done."
-
-**Wait for user confirmation before continuing.**
+The installer puts the binary at `~/.turso/turso`. Ensure it is executable:
 
 ```bash
-wsl -- /root/.turso/bin/turso db tokens create <db>
+MSYS_NO_PATHCONV=1 wsl -d Ubuntu -- sh -c 'chmod +x $HOME/.turso/turso && $HOME/.turso/turso --version'
 ```
 
-Capture the output — this is the token.
+**7w-3. Authenticate (headless):**
 
-**If WSL is not installed:**
+WSL has no browser, so use headless mode:
 
-WSL is required to run the Turso CLI on Windows. Install it:
+```bash
+MSYS_NO_PATHCONV=1 wsl -d Ubuntu -- sh -c '$HOME/.turso/turso auth login --headless'
+```
 
-> Open an admin PowerShell and run: `wsl --install`
-> After the reboot and WSL first-run setup, re-open this repo and run `/setup` again.
+This prints a URL. Tell the user:
+
+> "Open this URL in your browser and log in. The page will display a token
+> (starts with `turso config set token ...`). Copy the **token value** (the
+> long string after `token`) and paste it here."
+
+**Wait for the user to paste the token.**
+
+Then set it:
+
+```bash
+MSYS_NO_PATHCONV=1 wsl -d Ubuntu -- sh -c '$HOME/.turso/turso config set token "<pasted token>"'
+```
+
+**7w-4. Create a database token:**
+
+```bash
+MSYS_NO_PATHCONV=1 wsl -d Ubuntu -- sh -c '$HOME/.turso/turso db tokens create <db>'
+```
+
+Capture the output — this is the DB token used in the next step.
 
 ### Connect ZAM to Turso
 
