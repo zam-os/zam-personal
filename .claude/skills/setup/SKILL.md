@@ -13,7 +13,8 @@ You are guiding the user through first-time setup of their ZAM personal instance
 ## What you are setting up
 
 - **This repo** (`beliefs/`, `goals/`) — the slow layer. Tracked in git. Changes require a commit to take effect.
-- **`~/.zam/zam.db`** — the fast layer. Tokens, cards, review history, sessions. Not committed to git.
+- **ZAM database** — the fast layer. Local SQLite is the fallback; if `turso.url` is configured, the existing Turso DB is the source of truth.
+- **`~/.zam/credentials.json`** — machine-local secrets such as Turso tokens. Never commit it.
 - **Skill files** — copied from `zam-core` into `.claude/skills/zam/` and `.gemini/skills/zam/`. These unlock the `/zam` learning agent.
 - **Community repos** — cloned alongside this repo, linked if they are source packages.
 
@@ -60,13 +61,13 @@ Confirm with:
 npx zam --version
 ```
 
-## Step 4 — Distribute skills and initialize DB
+## Step 4 — Distribute skills and initialize local fallback DB
 
 ```bash
 npx zam setup
 ```
 
-This copies `.claude/skills/zam/` and `.gemini/skills/zam/` from `node_modules/zam-core/`, initializes `~/.zam/zam.db`, and skips CLAUDE.md (already present).
+This copies `.claude/skills/zam/` and `.gemini/skills/zam/` from `node_modules/zam-core/` and initializes the local fallback DB if no cloud credentials are configured. If `turso.url` is set, do not treat a new local DB as useful state; connect to Turso in Step 7 and verify cloud stats.
 
 To update existing skill files: `npx zam setup --force`
 
@@ -134,118 +135,37 @@ Confirm the link worked:
 npx zam --version
 ```
 
-## Step 7 — Turso cloud sync
+## Step 7 — Turso cloud database
 
 **Skip if `turso.url` is empty.**
 
-The goal: obtain a Turso auth token, then run `zam connector setup turso` interactively.
+The configured Turso database is the source of truth for tokens, cards, review history, and sessions. The repo stores only the non-secret URL/database name. The machine-local token belongs in `~/.zam/credentials.json`.
 
-### macOS
-
-Check if Turso CLI is installed:
+First check whether credentials already exist:
 ```bash
-turso --version
+npx zam connector sync
 ```
 
-If missing:
-```bash
-brew install tursodatabase/tap/turso
-```
+If this succeeds, continue to verification. If it says Turso is not configured, obtain a database token. Prefer the least invasive path:
 
-Authenticate:
-```bash
-turso auth login
-```
+- If Turso CLI is already installed and authenticated, run `turso db tokens create <db>`.
+- If not authenticated, run `turso auth login`, let the user complete browser login, then run `turso db tokens create <db>`.
+- On Windows, do **not** require WSL just to continue setup. If Turso CLI is unavailable, ask the user to generate a DB token from the Turso dashboard or from another machine.
 
-> "Please complete the Turso login in your browser — let me know when it's done."
-
-**Wait for user confirmation before continuing.**
-
-Create a token using `turso.db` from config:
-```bash
-turso db tokens create <db>
-```
-
-Capture the output — this is the token.
-
-### Windows — WSL with a full Linux distro
-
-The Turso CLI requires a real Linux distro in WSL (Docker Desktop does not count).
-
-> **IMPORTANT — Git Bash path mangling:** Every `wsl` command must be prefixed
-> with `MSYS_NO_PATHCONV=1` to prevent Git Bash from rewriting Unix paths.
-
-**7w-1. Check for a usable WSL distro:**
-
-```bash
-MSYS_NO_PATHCONV=1 wsl -l -v
-```
-
-Look for a distro like **Ubuntu** (not `docker-desktop`). If none exists:
-
-> Open an admin PowerShell and run: `wsl --install -d Ubuntu`
-> Complete the Ubuntu first-run setup (username/password), then re-run `/setup`.
-
-**Stop here if no usable distro is available.**
-
-For the remaining commands, use `-d <distro>` (e.g. `-d Ubuntu`) to target the
-correct distro.
-
-**7w-2. Install the Turso CLI:**
-
-```bash
-MSYS_NO_PATHCONV=1 wsl -d Ubuntu -- sh -c 'curl -sSfL https://get.tur.so/install.sh | sh'
-```
-
-The installer puts the binary at `~/.turso/turso`. Ensure it is executable:
-
-```bash
-MSYS_NO_PATHCONV=1 wsl -d Ubuntu -- sh -c 'chmod +x $HOME/.turso/turso && $HOME/.turso/turso --version'
-```
-
-**7w-3. Authenticate (headless):**
-
-WSL has no browser, so use headless mode:
-
-```bash
-MSYS_NO_PATHCONV=1 wsl -d Ubuntu -- sh -c '$HOME/.turso/turso auth login --headless'
-```
-
-This prints a URL. Tell the user:
-
-> "Open this URL in your browser and log in. The page will display a token
-> (starts with `turso config set token ...`). Copy the **token value** (the
-> long string after `token`) and paste it here."
-
-**Wait for the user to paste the token.**
-
-Then set it:
-
-```bash
-MSYS_NO_PATHCONV=1 wsl -d Ubuntu -- sh -c '$HOME/.turso/turso config set token "<pasted token>"'
-```
-
-**7w-4. Create a database token:**
-
-```bash
-MSYS_NO_PATHCONV=1 wsl -d Ubuntu -- sh -c '$HOME/.turso/turso db tokens create <db>'
-```
-
-Capture the output — this is the DB token used in the next step.
-
-### Connect ZAM to Turso
-
-Once you have the token, pass it directly (no interactive prompts):
+Connect ZAM non-interactively:
 ```bash
 npx zam connector setup turso --url "<turso.url from config>" --token "<captured token>"
 ```
 
+The token is a secret. Do not echo it back, write it into the repo, or commit it.
+
 Verify:
 ```bash
+npx zam connector sync
 npx zam stats --user <user_id>
 ```
 
-You should see existing card counts and review history.
+You should see existing card counts and review history. If stats show an empty deck while a cloud DB was expected, stop and investigate the Turso connection instead of registering new tokens.
 
 ## Step 8 — Azure DevOps connector
 
@@ -271,7 +191,7 @@ npx zam settings set --key personal.goals_dir --value "$(pwd)/goals"
 ## Step 10 — Commit setup artifacts
 
 ```bash
-git add .claude/skills/zam/ .gemini/skills/zam/ CLAUDE.md
+git add .claude/skills/zam/ .gemini/skills/zam/ .github/copilot-instructions.md CLAUDE.md README.md
 git commit -m "chore: distribute zam-core skill files"
 ```
 

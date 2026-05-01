@@ -3,12 +3,34 @@
 This is a ZAM personal instance. ZAM builds lasting skills through spaced
 repetition during real work — not separate study sessions.
 
-## First time here?
+## Agent bootstrap
 
-Run `/setup` to complete first-time setup. It will:
-- Install dependencies and distribute skill files (`zam setup`)
-- Initialize the learning database (`~/.zam/zam.db`)
-- Walk you through identity, connectors, and your first goals
+Before doing ZAM work, read `.zam/config.yaml`. It is the non-secret source of
+truth for identity, communities, Turso URL/database name, and connector config.
+
+If `communities` contains entries such as `github:zam-os/zam-dev`, this repo is
+part of a multi-repo workspace. Clone or pull those sibling repos first. If a
+community config lists repos with `link: true`, install and `npm link` those
+source packages before relying on the npm package installed in this repo.
+
+If `turso.url` is set, the existing Turso database is the source of truth for
+learning tokens, cards, reviews, and sessions. Do not treat an empty local
+`~/.zam/zam.db` as useful state. Ask only for missing secrets, then run:
+
+```bash
+npx zam connector setup turso --url "<turso.url from .zam/config.yaml>" --token "<database token>"
+npx zam stats --user "<identity.user_id>"
+```
+
+Secrets must stay out of the repo. Turso credentials belong in
+`~/.zam/credentials.json`.
+
+Run `/setup` to complete first-time setup. It should:
+- Install dependencies and distribute skill files (`npx zam setup`)
+- Pull/link configured community source repos where needed
+- Set identity from `.zam/config.yaml`
+- Connect to the configured cloud database when Turso credentials are present
+- Ask for missing secrets only
 
 ## Regular use
 
@@ -24,9 +46,9 @@ conscious decision you made in conversation with the ZAM agent.
 
 ## Fast-changing data
 
-Learning tokens, cards, review history, and sessions live in `~/.zam/zam.db`
-(local SQLite, not committed to git). Use `zam connector setup turso` to
-enable cloud sync across machines.
+Learning tokens, cards, review history, and sessions live in the ZAM database.
+Local SQLite is the fallback. If `.zam/config.yaml` has `turso.url`, use that
+cloud database across machines and store only its secret token locally.
 
 ## Skill files
 
@@ -35,4 +57,4 @@ After running `zam setup`, you will find:
 - `.gemini/skills/zam/SKILL.md` — the same for Gemini CLI
 
 These are distributed from the `zam` npm package. To update them after a `zam`
-upgrade: `npm install && zam setup --force`
+upgrade or linked source update: `npm install && npx zam setup --force`

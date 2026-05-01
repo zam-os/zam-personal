@@ -13,7 +13,8 @@ You are guiding the user through first-time setup of their ZAM personal instance
 ## What you are setting up
 
 - **This repo** (`beliefs/`, `goals/`) — the slow layer. Tracked in git. Changes require a commit to take effect.
-- **`~/.zam/zam.db`** — the fast layer. Tokens, cards, review history, sessions. Not committed to git.
+- **ZAM database** — the fast layer. Local SQLite is the fallback; if `turso.url` is configured, the existing Turso DB is the source of truth.
+- **`~/.zam/credentials.json`** — machine-local secrets such as Turso tokens. Never commit it.
 - **Skill files** — copied from `zam-core` into `.claude/skills/zam/` and `.gemini/skills/zam/`. These unlock the `/zam` learning agent.
 - **Community repos** — cloned alongside this repo, linked if they are source packages.
 
@@ -60,13 +61,13 @@ Confirm with:
 npx zam --version
 ```
 
-## Step 4 — Distribute skills and initialize DB
+## Step 4 — Distribute skills and initialize local fallback DB
 
 ```bash
 npx zam setup
 ```
 
-This copies `.claude/skills/zam/` and `.gemini/skills/zam/` from `node_modules/zam-core/`, initializes `~/.zam/zam.db`, and skips CLAUDE.md (already present).
+This copies `.claude/skills/zam/` and `.gemini/skills/zam/` from `node_modules/zam-core/` and initializes the local fallback DB if no cloud credentials are configured. If `turso.url` is set, do not treat a new local DB as useful state; connect to Turso in Step 7 and verify cloud stats.
 
 To update existing skill files: `npx zam setup --force`
 
@@ -134,92 +135,37 @@ Confirm the link worked:
 npx zam --version
 ```
 
-## Step 7 — Turso cloud sync
+## Step 7 — Turso cloud database
 
 **Skip if `turso.url` is empty.**
 
-The goal: obtain a Turso auth token, then run `zam connector setup turso` interactively.
+The configured Turso database is the source of truth for tokens, cards, review history, and sessions. The repo stores only the non-secret URL/database name. The machine-local token belongs in `~/.zam/credentials.json`.
 
-### macOS
-
-Check if Turso CLI is installed:
+First check whether credentials already exist:
 ```bash
-turso --version
+npx zam connector sync
 ```
 
-If missing:
+If this succeeds, continue to verification. If it says Turso is not configured, obtain a database token. Prefer the least invasive path:
+
+- If Turso CLI is already installed and authenticated, run `turso db tokens create <db>`.
+- If not authenticated, run `turso auth login`, let the user complete browser login, then run `turso db tokens create <db>`.
+- On Windows, do **not** require WSL just to continue setup. If Turso CLI is unavailable, ask the user to generate a DB token from the Turso dashboard or from another machine.
+
+Connect ZAM non-interactively:
 ```bash
-brew install tursodatabase/tap/turso
+npx zam connector setup turso --url "<turso.url from config>" --token "<captured token>"
 ```
 
-Authenticate:
-```bash
-turso auth login
-```
-
-> "Please complete the Turso login in your browser — let me know when it's done."
-
-**Wait for user confirmation before continuing.**
-
-Create a token using `turso.db` from config:
-```bash
-turso db tokens create <db>
-```
-
-Capture the output — this is the token.
-
-### Windows — check for WSL first
-
-```bash
-wsl --version
-```
-
-**If WSL is available:**
-
-```bash
-wsl -- curl -sSfL https://get.tur.so/install.sh | bash
-wsl -- turso auth login
-```
-
-> "Please complete the Turso login in your browser — let me know when it's done."
-
-**Wait for user confirmation before continuing.**
-
-```bash
-wsl -- /root/.turso/bin/turso db tokens create <db>
-```
-
-Capture the output — this is the token.
-
-**If WSL is not installed:**
-
-Offer two options:
-
-> **Option A — Install WSL** (requires admin + reboot):
-> In an admin PowerShell: `wsl --install`
-> After reboot and WSL setup, re-open this repo and run `/setup` again.
-
-> **Option B — Get the token another way:**
-> - From the Turso web dashboard: Databases → `<db>` → Generate Token
-> - Or from another machine: `turso db tokens create <db>`
->
-> Paste the token when ready and I'll continue.
-
-### Connect ZAM to Turso
-
-Once you have the token:
-```bash
-npx zam connector setup turso
-```
-
-When prompted: paste the `turso.url` from config and the token.
+The token is a secret. Do not echo it back, write it into the repo, or commit it.
 
 Verify:
 ```bash
+npx zam connector sync
 npx zam stats --user <user_id>
 ```
 
-You should see existing card counts and review history.
+You should see existing card counts and review history. If stats show an empty deck while a cloud DB was expected, stop and investigate the Turso connection instead of registering new tokens.
 
 ## Step 8 — Azure DevOps connector
 
@@ -247,7 +193,7 @@ npx zam settings set --key personal.goals_dir --value "$(pwd)/goals"
 ## Step 10 — Commit setup artifacts
 
 ```bash
-git add .claude/skills/zam/ .gemini/skills/zam/ CLAUDE.md
+git add .claude/skills/zam/ .gemini/skills/zam/ .github/copilot-instructions.md CLAUDE.md README.md
 git commit -m "chore: distribute zam-core skill files"
 ```
 

@@ -6,12 +6,17 @@ identity:
   user_id: ""                # your ZAM identity, e.g. "thomas"
 
 communities:                 # communities this person belongs to
-  []                         # - url: github:zam-os/zam-dev
+  []                         # Example:
+                             # - url: github:zam-os/zam-dev
                              #   role: developer   # member | contributor | maintainer | developer
+                             # Setup agents must clone/pull these repos and link
+                             # source packages declared by the community config.
 
 turso:
   url: ""                    # Turso DB URL, e.g. "libsql://zam-yourname.region.turso.io"
   db: ""                     # Turso DB name — used by turso CLI for token creation
+                             # If url is set, connect to this existing cloud DB.
+                             # Store only the token in ~/.zam/credentials.json.
 
 connectors:
   ado:
