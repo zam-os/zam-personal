@@ -6,6 +6,9 @@ user-invocable: true
 
 # ZAM Setup
 
+In Codex, invoke this workflow as `$setup` or select `setup` through `/skills`.
+Codex does not expose repository skills as custom `/setup` slash commands.
+
 You are guiding the user through first-time setup of their ZAM personal instance. Be direct and practical. Run each step, confirm it worked, then move to the next.
 
 ---
@@ -14,7 +17,7 @@ You are guiding the user through first-time setup of their ZAM personal instance
 
 - **This repo** (`beliefs/`, `goals/`) — the slow layer. Tracked in git. Changes require a commit to take effect.
 - **`~/.zam/zam.db`** — the fast layer. Tokens, cards, review history, sessions. Not committed to git.
-- **Skill files** — copied from `zam-core` into `.claude/skills/zam/`, `.agent/skills/zam/`, and `.agents/skills/zam/`.
+- **Skill files** — copied from `zam-core` into `.claude/skills/zam/`, `.agent/skills/zam/`, and `.agents/skills/zam/`. The Codex skill is invoked with `$zam` or through `/skills`.
 - **Community repos** — cloned alongside this repo, linked if they are source packages.
 
 ---
@@ -66,8 +69,9 @@ npx zam --version
 npx zam setup
 ```
 
-This copies the ZAM skill into all supported agent directories, including
-`.agents/skills/zam/` for Codex, and initializes `~/.zam/zam.db`.
+This copies the ZAM skill into the supported agent directories, including
+`.agents/skills/zam/` for Codex, initializes `~/.zam/zam.db`, and preserves
+existing `CLAUDE.md` and `AGENTS.md` files.
 
 To update existing skill files: `npx zam setup --force`
 
@@ -243,7 +247,7 @@ git commit -m "chore: distribute zam-core skill files"
 
 ## Step 11 — Done
 
-> "Setup is complete. Run `/zam` to start a learning session."
+> "Setup is complete. In Codex, run `$zam` or select `zam` through `/skills` to start a learning session."
 
 ---
 

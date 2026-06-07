@@ -14,7 +14,7 @@ You are guiding the user through first-time setup of their ZAM personal instance
 
 - **This repo** (`beliefs/`, `goals/`) — the slow layer. Tracked in git. Changes require a commit to take effect.
 - **`~/.zam/zam.db`** — the fast layer. Tokens, cards, review history, sessions. Not committed to git.
-- **Skill files** — copied from `zam-core` into `.claude/skills/zam/` and `.gemini/skills/zam/`. These unlock the `/zam` learning agent.
+- **Skill files** — copied from `zam-core` into `.claude/skills/zam/`, `.agent/skills/zam/`, and `.agents/skills/zam/`.
 - **Community repos** — cloned alongside this repo, linked if they are source packages.
 
 ---
@@ -66,7 +66,8 @@ npx zam --version
 npx zam setup
 ```
 
-This copies `.claude/skills/zam/` and `.gemini/skills/zam/` from `node_modules/zam-core/`, initializes `~/.zam/zam.db`, and skips CLAUDE.md (already present).
+This copies the ZAM skill into all supported agent directories, including
+`.agents/skills/zam/` for Codex, and initializes `~/.zam/zam.db`.
 
 To update existing skill files: `npx zam setup --force`
 
@@ -247,7 +248,7 @@ npx zam settings set --key personal.goals_dir --value "$(pwd)/goals"
 ## Step 10 — Commit setup artifacts
 
 ```bash
-git add .claude/skills/zam/ .gemini/skills/zam/ CLAUDE.md
+git add .claude/skills/zam/ .agent/skills/zam/ .agents/skills/zam/ CLAUDE.md AGENTS.md
 git commit -m "chore: distribute zam-core skill files"
 ```
 
@@ -262,6 +263,6 @@ git commit -m "chore: distribute zam-core skill files"
 ```bash
 npm install
 npx zam setup --force
-git add .claude/skills/zam/ .gemini/skills/zam/
+git add .claude/skills/zam/ .agent/skills/zam/ .agents/skills/zam/
 git commit -m "chore: update zam-core skill files"
 ```

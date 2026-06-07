@@ -32,7 +32,8 @@ enable cloud sync across machines.
 
 After running `zam setup`, you will find:
 - `.claude/skills/zam/SKILL.md` — the ZAM learning agent skill for Claude Code
-- `.gemini/skills/zam/SKILL.md` — the same for Gemini CLI
+- `.agent/skills/zam/SKILL.md` — the shared agent skill for compatible clients
+- `.agents/skills/zam/SKILL.md` — the Codex-specific ZAM skill
 
 These are distributed from the `zam` npm package. To update them after a `zam`
 upgrade: `npm install && zam setup --force`

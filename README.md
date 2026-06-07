@@ -44,14 +44,18 @@ git add .zam/config.yaml
 git commit -m "chore: configure instance"
 ```
 
-### 3. Run `/setup` in Claude Code or Gemini CLI
+### 3. Run the setup skill
 
 ```bash
 claude  # or: gemini
 # then: /setup
+
+# Codex:
+codex
+# then: $setup (or select setup through /skills)
 ```
 
-The `/setup` skill reads your config, detects your OS (macOS or Windows), and handles everything:
+The setup skill reads your config, detects your OS (macOS or Windows), and handles everything:
 - Installs Node.js if missing (`brew` on Mac, `winget` on Windows)
 - Installs the `zam` CLI (`npm install`)
 - Distributes skill files and initializes the database (`zam setup`)
@@ -61,17 +65,24 @@ The `/setup` skill reads your config, detects your OS (macOS or Windows), and ha
 
 ### 4. Start learning
 
-Run `/zam` to begin a learning session.
+Run `/zam` in Claude/Gemini-compatible clients. In Codex, run `$zam` or select
+`zam` through `/skills`.
 
 ## Setting up a new machine
 
-Clone your personal repo on the new machine and run `/setup`. The config is already in `.zam/config.yaml` — setup reads it and handles platform-specific tool installation and auth flows automatically.
+Clone your personal repo on the new machine and run the setup skill. The config
+is already in `.zam/config.yaml`; setup reads it and handles platform-specific
+tool installation and auth flows automatically.
 
 ```bash
 git clone https://github.com/YourName/zam-YourName
 cd zam-YourName
 claude  # or: gemini
 # then: /setup
+
+# Codex:
+codex
+# then: $setup
 ```
 
 ## Supported platforms
@@ -101,6 +112,6 @@ Both evolve through conversation with the ZAM agent. Both require your explicit 
 ```bash
 npm install
 npx zam setup --force
-git add .claude/skills/zam/ .gemini/skills/zam/
+git add .claude/skills/zam/ .agent/skills/zam/ .agents/skills/zam/ AGENTS.md
 git commit -m "chore: update zam skill files"
 ```
