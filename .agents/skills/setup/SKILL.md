@@ -6,6 +6,9 @@ user-invocable: true
 
 # ZAM Setup
 
+In Codex, invoke this workflow as `$setup` or select `setup` through `/skills`.
+Codex does not expose repository skills as custom `/setup` slash commands.
+
 You are guiding the user through first-time setup of their ZAM personal instance. Be direct and practical. Run each step, confirm it worked, then move to the next.
 
 ---
@@ -15,7 +18,7 @@ You are guiding the user through first-time setup of their ZAM personal instance
 - **This repo** (`beliefs/`, `goals/`) — the slow layer. Tracked in git. Changes require a commit to take effect.
 - **ZAM database** — the fast layer. Local SQLite is the fallback; if `turso.url` is configured, the existing Turso DB is the source of truth.
 - **`~/.zam/credentials.json`** — machine-local secrets such as Turso tokens. Never commit it.
-- **Skill files** — copied from `zam-core` into `.claude/skills/zam/`, `.agent/skills/zam/`, and `.agents/skills/zam/`.
+- **Skill files** — copied from `zam-core` into `.claude/skills/zam/`, `.agent/skills/zam/`, and `.agents/skills/zam/`. The Codex skill is invoked with `$zam` or through `/skills`.
 - **Community repos** — cloned alongside this repo, linked if they are source packages.
 
 ---
@@ -175,15 +178,13 @@ You should see existing card counts and review history. If stats show an empty d
 **Skip if `connectors.ado.org_url` is empty.**
 
 ```bash
-npx zam settings set --key ado.org_url --value "<org_url>"
-npx zam settings set --key ado.project --value "<project>"
+npx zam connector setup ado
 ```
 
-Prompt for the PAT:
-> "Please provide your Azure DevOps Personal Access Token (Work Items: Read scope)."
+When prompted, enter the org URL, project name, and PAT from config / user input.
 
+Verify:
 ```bash
-npx zam settings set --key ado.pat --value "<PAT>"
 npx zam connector tasks
 ```
 
@@ -202,7 +203,7 @@ git commit -m "chore: distribute zam-core skill files"
 
 ## Step 11 — Done
 
-> "Setup is complete. Run `/zam` in Gemini CLI to start a learning session."
+> "Setup is complete. In Codex, run `$zam` or select `zam` through `/skills` to start a learning session."
 
 ---
 

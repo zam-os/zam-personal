@@ -15,7 +15,7 @@ You are guiding the user through first-time setup of their ZAM personal instance
 - **This repo** (`beliefs/`, `goals/`) — the slow layer. Tracked in git. Changes require a commit to take effect.
 - **ZAM database** — the fast layer. Local SQLite is the fallback; if `turso.url` is configured, the existing Turso DB is the source of truth.
 - **`~/.zam/credentials.json`** — machine-local secrets such as Turso tokens. Never commit it.
-- **Skill files** — copied from `zam-core` into `.claude/skills/zam/` and `.gemini/skills/zam/`. These unlock the `/zam` learning agent.
+- **Skill files** — copied from `zam-core` into `.claude/skills/zam/`, `.agent/skills/zam/`, and `.agents/skills/zam/`.
 - **Community repos** — cloned alongside this repo, linked if they are source packages.
 
 ---
@@ -67,7 +67,10 @@ npx zam --version
 npx zam setup
 ```
 
-This copies `.claude/skills/zam/` and `.gemini/skills/zam/` from `node_modules/zam-core/` and initializes the local fallback DB if no cloud credentials are configured. If `turso.url` is set, do not treat a new local DB as useful state; connect to Turso in Step 7 and verify cloud stats.
+This copies the ZAM skill into all supported agent directories, including
+`.agents/skills/zam/` for Codex, and initializes the local fallback DB if no
+cloud credentials are configured. If `turso.url` is set, do not treat a new
+local DB as useful state; connect to Turso in Step 7 and verify cloud stats.
 
 To update existing skill files: `npx zam setup --force`
 
@@ -191,7 +194,7 @@ npx zam settings set --key personal.goals_dir --value "$(pwd)/goals"
 ## Step 10 — Commit setup artifacts
 
 ```bash
-git add .claude/skills/zam/ .gemini/skills/zam/ .github/copilot-instructions.md CLAUDE.md README.md
+git add .claude/skills/zam/ .agent/skills/zam/ .agents/skills/zam/ .github/copilot-instructions.md CLAUDE.md AGENTS.md README.md
 git commit -m "chore: distribute zam-core skill files"
 ```
 
@@ -206,6 +209,6 @@ git commit -m "chore: distribute zam-core skill files"
 ```bash
 npm install
 npx zam setup --force
-git add .claude/skills/zam/ .gemini/skills/zam/
+git add .claude/skills/zam/ .agent/skills/zam/ .agents/skills/zam/
 git commit -m "chore: update zam-core skill files"
 ```

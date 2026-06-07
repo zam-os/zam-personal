@@ -104,13 +104,17 @@ npx zam stats --user "<identity.user_id>"
 
 The token is stored outside the repo in `~/.zam/credentials.json`.
 
-### 5. Run `/setup` in your agent CLI
+### 5. Run the setup skill in your agent CLI
 
-Open this repo in Claude Code, Gemini CLI, Copilot CLI, or another agent that understands this repository's instructions, then run `/setup` where available. Setup should install missing tools, distribute skills, set identity, and ask only for missing secrets.
+Open this repo in Claude Code, Gemini CLI, Copilot CLI, Codex, or another agent
+that understands this repository's instructions. Run `/setup` where available.
+In Codex, run `$setup` or select `setup` through `/skills`. Setup should install
+missing tools, distribute skills, set identity, and ask only for missing secrets.
 
 ### 6. Start learning
 
-Run `/zam` to begin a learning session.
+Run `/zam` in Claude/Gemini-compatible clients. In Codex, run `$zam` or select
+`zam` through `/skills`.
 
 ## Setting up a new machine
 
@@ -122,6 +126,8 @@ The fresh-machine rule is: **repo config first, latest linked repos second, secr
 4. Clone or pull configured community/source repos and `npm link` source packages.
 5. If `turso.url` is configured and `~/.zam/credentials.json` has no token, ask for Turso login/token and run `npx zam connector setup turso --url ... --token ...`.
 6. Verify with `npx zam stats --user <user_id>` before registering tokens or starting sessions.
+
+Use `$setup` or `/skills` when performing this flow in Codex.
 
 ## Supported platforms
 
@@ -150,6 +156,6 @@ Both evolve through conversation with the ZAM agent. Both require your explicit 
 ```bash
 npm install
 npx zam setup --force
-git add .claude/skills/zam/ .gemini/skills/zam/ CLAUDE.md
+git add .claude/skills/zam/ .agent/skills/zam/ .agents/skills/zam/ AGENTS.md
 git commit -m "chore: update zam skill files"
 ```
