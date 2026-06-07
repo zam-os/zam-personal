@@ -4,6 +4,6 @@
   "private": true,
   "description": "Your personal ZAM kernel — beliefs, goals, and identity.",
   "dependencies": {
-    "zam-core": "^0.3.5"
+    "zam-core": "^0.3.6"
   }
 }
